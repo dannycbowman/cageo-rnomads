@@ -1,0 +1,37 @@
+Example code from
+Bowman and Lees (2015) Near real time weather and ocean model data access with rNOMADS.  Computers & Geosciences DOI: 	10.1016/j.cageo.2015.02.013
+Source code documents for this paper are:
+rNOMADS_dods_examples.R
+rNOMADS_grib_examples.R
+code_snippets_in_paper.R
+
+code_snippets_in_paper.R includes the code examples in the manuscript itself, supplemented with inline comments.
+rNOMADS_dods_examples.R and rNOMADS_grib_examples.R are designed to demonstrate rNOMADS functionality using the GrADS-DODS data retrieval system and the GRIB data retrieval system.
+Both sets of source code will generate the same figures.
+In order to run them, you must have R 3.1.1 installed; download it for free here:
+http://cran.r-project.org/
+You must also have an active Internet connection.
+Ubuntu/centOS users may have to install additional software:
+libxml2-dev
+libcurl4-openssl-dev
+libboost-dev
+in order to get rNOMADS to install correctly.
+Since Windows and MacOS download rNOMADS in binary form (rather than compiling it from the source), they should have no trouble.
+
+Once rNOMADS has been successfully installed:
+If data fail to download from the NOMADS server, wait a half hour and try again - sometimes the model data is not available online yet.
+Alternatively, the whole server could be down (this happens rarely).
+
+Special consideration for the GrADS-DODS examples:
+If the code does not work, verify that your firewall is not blocking Port 9090.
+
+Special consideration for the GRIB examples:
+These examples work on Linux and Mac OS; at least one user has gotten grib to work on Windows 7 but I am not sure how.
+You must compile and install wgrib2 and insure it is on your PATH variable - otherwise you will not be able to read GRIB files.
+Download wgrib2 for free here:
+http://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/
+WARNING: do NOT use other sources of this code (e. g. no "apt-get install wgrib") as they will cause segmentation faults.
+
+If you have any questions or are having trouble with any part of this process, please post a message to the rNOMADS mailing list:
+https://lists.r-forge.r-project.org/mailman/listinfo/rnomads-user
+

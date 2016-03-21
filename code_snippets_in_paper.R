@@ -68,15 +68,15 @@ grib.data <- ReadGrib(grib.info$file.name, levels, variables)
 # I have notified the server maintainers of the problem.
 # Danny Bowman 2-17-2015
 # Apparently gfs-avn-hi does not archive more than a few years before present, so I've modified this script to pull data
-# a month before today's date.
+# three months before today's date.
 ###   
 
 library(rNOMADS)
 library(lubridate)
-now.date <- Sys.Date()
-model.date <- paste0(year(now.date), 
-   sprintf("%02i", month(now.date)), 
-   sprintf("%02i", day(now.date)))
+date.tmp <- Sys.Date() + duration(-3, units = "month")
+model.date <- paste0(year(date.tmp), 
+   sprintf("%02i", month(date.tmp)), 
+   sprintf("%02i", day(date.tmp)))
 
 model.urls <- GetDODSDates("gfs-avn-hi", archive = TRUE)                   #Get available model runs
 m.ind <- which(model.urls$date == as.character(model.date))

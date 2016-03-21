@@ -92,6 +92,6 @@ tmp2m.data <- DODSGrab(model.urls$url[m.ind], model.run,
     var.lev, time, lon, lat)
 var <- "tmp"                                                               #Temperature
 lev <- c(16, 16)                                                           #300 mb level
-tmp300mb <- DODSGrab(model.urls$url[m.ind], model.run,
+tmp300mb.data <- DODSGrab(model.urls$url[m.ind], model.run,
     var, time, lon, lat, levels = lev)
 

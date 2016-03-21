@@ -168,37 +168,25 @@ latest.model.run <- tail(model.runs$model.run, 1)
 
 #Get data
 
-time <- c(0,0) #Analysis model
-lev <- c(0, 46) #All levels in atmosphere
+time      <- c(0,0) #Analysis model
+lev       <- c(0, 46) #All levels in atmosphere
+variables <- c("tmpprs", "hgtprs", "ugrdprs", "vgrdprs") #Temp, height, E-W wind, N-S wind
 
-#Temperature
-tmp.data <- DODSGrab(latest.model, latest.model.run,
-   "tmpprs", time, rep(model.lon.ind, 2), rep(model.lat.ind, 2), 
-    levels = lev, display.url = FALSE)
+model.data <- DODSGrab(latest.model, latest.model.run, variables,
+    time, c(model.lon.ind - 2, model.lon.ind + 2),
+    c(model.lat.ind - 2, model.lat.ind + 2),
+    levels = lev)
+    
+    
 
-#Geopotential height
-hgt.data <- DODSGrab(latest.model, latest.model.run,
-   "hgtprs", time, rep(model.lon.ind, 2), rep(model.lat.ind, 2), 
-    levels = lev, display.url = FALSE)
+profile <- BuildProfile(model.data, lon, lat, spatial.average = TRUE, points = 4)
 
-#E-W wind
-ugrd.data <- DODSGrab(latest.model, latest.model.run,
-   "ugrdprs", time, rep(model.lon.ind, 2), rep(model.lat.ind, 2), 
-    levels = lev, display.url = FALSE)
-
-#N-S wind
-vgrd.data <- DODSGrab(latest.model, latest.model.run,
-   "vgrdprs", time, rep(model.lon.ind, 2), rep(model.lat.ind, 2),  
-    levels = lev, display.url = FALSE)
-
-
-hgt <- hgt.data$value
+hgt <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "hgtprs"),]
 
 
 #FIGURE 6 - temperature
 
-
-tmp <- tmp.data$value - 273.15
+tmp <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "tmpprs"),] - 272.15
 
 #Let's make a spline
 
@@ -212,35 +200,33 @@ plot(tmp, hgt, pch = 19, col = "red",
    main = paste("Temperature versus Geopotential Height"))
 lines(synth.tmp, synth.hgt, col = "blue")
 legend("topright", col = c("red", "blue"), pch = c(19, NA),
-   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"))
+   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"),
+   bg = "white")
 
-#FIGURE 7 - Wind Speed
+#FIGURE 7 - Wind Speed and azimuth
 
-wu <- ugrd.data$value
-wv <- vgrd.data$value
-wvel <- sqrt(wu^2 + wv^2) 
-
-#Convert to km/hr
-wvel <- wvel * 3.6
+wu <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "ugrdprs"),]
+wv <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "vgrdprs"),]
 
 #Let's make a spline 
-
-tmp.spline <- splinefun(hgt, wvel, method = "natural")
+wu.spline <- splinefun(hgt, wu, method = "natural")
+wv.spline <- splinefun(hgt, wv, method = "natural")
 
 synth.hgt <- seq(min(hgt), max(hgt), length.out = 1000)
-synth.wvel <- tmp.spline(synth.hgt)
+synth.uvel <- wu.spline(synth.hgt)
+synth.vvel <- wv.spline(synth.hgt)
 
-plot(wvel, hgt, pch = 19, col = "red",
-   xlab = "Wind Speed (km/hr)", ylab = "Height (m)",
-   main = paste("Wind Speed versus Geopotential Height"))
-lines(synth.wvel, synth.hgt, col = "blue")
-legend("bottomright", col = c("red", "blue"), pch = c(19, NA),
-   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"))
+PlotWindProfile(synth.uvel, synth.vvel, synth.hgt, lines = TRUE, 
+    points = FALSE, elev.circles = c(0, 25000, 50000), 
+    elev.labels = c("0", "25", "50 km asl"),
+    radial.lines = seq(45, 360, by = 45), colorbar = TRUE, invert = FALSE, 
+    point.cex = 2, pch = 19, lty = 1, lwd = 3, 
+    height.range = c(0, 50000), colorbar.label = "Wind Speed (m/s)")
 
 #FIGURE 8
 #ATMOSPHERIC DENSITY (ASSUMING DRY AIR)
 
-p <- ugrd.data$levels * 100
+p <- profile[[1]]$levels * 100
 R <- 287.058 #Specific gas constant, J/(kg * K)
 
 rho <- p / ((tmp + 273.15) * R) #Air density

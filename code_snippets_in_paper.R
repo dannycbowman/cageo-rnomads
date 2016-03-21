@@ -67,10 +67,16 @@ grib.data <- ReadGrib(grib.info$file.name, levels, variables)
 # which means that this code snippet may not work (though real time DODS is fine).
 # I have notified the server maintainers of the problem.
 # Danny Bowman 2-17-2015
+# Apparently gfs-avn-hi does not archive more than a few years before present, so I've modified this script to pull data
+# a month before today's date.
 ###   
 
 library(rNOMADS)
-model.date <- 20130921
+library(lubridate)
+now.date <- Sys.Date()
+model.date <- paste0(year(now.date), 
+   sprintf("%02i", month(now.date)), 
+   sprintf("%02i", day(now.date)))
 
 model.urls <- GetDODSDates("gfs-avn-hi", archive = TRUE)                   #Get available model runs
 m.ind <- which(model.urls$date == as.character(model.date))

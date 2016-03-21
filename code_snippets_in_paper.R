@@ -63,13 +63,7 @@ grib.data <- ReadGrib(grib.info$file.name, levels, variables)
 
 ###
 # SNIPPET 5 - ACCESSING ARCHIVED DATA WITH DODS
-# Note - the NOMADS NCDC server is currently throwing JavaScript errors when the GrADS-DODS interface is used,
-# which means that this code snippet may not work (though real time DODS is fine).
-# I have notified the server maintainers of the problem.
-# Danny Bowman 2-17-2015
-# Apparently gfs-avn-hi does not archive more than a few years before present, so I've modified this script to pull data
-# three months before today's date.
-###   
+###
 
 library(rNOMADS)
 library(lubridate)

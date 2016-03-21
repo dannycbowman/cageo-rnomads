@@ -49,38 +49,35 @@ latest.model.run <- tail(model.runs$model.run, 1)
 
 #Get data
 
-time <- c(0,0) #Analysis model
-lon <- c(0, 719) #All 720 longitude points
-lat <- c(0, 360) #All 361 latitude points
+time      <- c(0,0) #Analysis model
+lon       <- c(0, 719) #All 720 longitude points
+lat       <- c(0, 360) #All 361 latitude points
+ground.variables <- c("tmp2m", "rh2m") #Temperature and relative humidity
 
-tmp2m.data <- DODSGrab(latest.model, latest.model.run,
-   "tmp2m", time, lon, lat, display.url = FALSE)
-rh2m.data <- DODSGrab(latest.model, latest.model.run,
-   "rh2m", time, lon, lat, display.url = FALSE)
+ground.data <- DODSGrab(latest.model, latest.model.run,
+   ground.variables, time, lon, lat)
 
-lev <- c(28,28) #get 300 mb level
-tmp300.data <- DODSGrab(latest.model, latest.model.run,
-   "tmpprs", time, lon, lat, levels = lev, display.url = FALSE)
-ugrd300.data  <- DODSGrab(latest.model, latest.model.run,
-   "ugrdprs", time, lon, lat, levels = lev, display.url = FALSE)
-vgrd300.data  <- DODSGrab(latest.model, latest.model.run,
-   "vgrdprs", time, lon, lat, levels = lev, display.url = FALSE)
+mb300.variables <- c("tmpprs", "ugrdprs", "vgrdprs") #Temp, E-W wind, N-S wind
+lev       <- c(28,28) #get 300 mb level
 
+mb300.data <- DODSGrab(latest.model, latest.model.run,
+   mb300.variables, time, lon, lat, levels = lev)
 
 #FIGURE 1
 #Temperature at ground level
 
 #Make model grid
 
-atmos <- ModelGrid(tmp2m.data, c(0.5, 0.5), "latlon")
+ground <- ModelGrid(ground.data, c(0.5, 0.5))
 
 #Set up color scale
-colormap <- rev(rainbow(500, start = 0 , end = 5/6))
+colormap <- rev(rainbow(100, start = 0 , end = 5/6))
 
 #Make forecast image
-image(x = atmos$x, y = sort(atmos$y), z = atmos$z[1,1,,], col = colormap,
+image(x = ground$x, y = sort(ground$y), 
+    z = ground$z[1,which(ground.variables == "tmp2m"),,], col = colormap,
     xlab = "Longitude", ylab = "Latitude",
-    main = paste("World Temperature at Ground Level:", atmos$fcst.date))
+    main = paste("World Temperature at Ground Level:", ground$fcst.date))
 
 #Plot coastlines
 plotGEOmap(coastmap, border = "black", add = TRUE, 
@@ -89,9 +86,9 @@ plotGEOmap(coastmap, border = "black", add = TRUE,
 
 #FIGURE 2
 #Temperature at 300 mb
-atmos <- ModelGrid(tmp300.data, c(0.5, 0.5), "latlon")
-colormap <- rev(rainbow(500, start = 0 , end = 5/6))
-image(x = atmos$x, y = atmos$y, z = atmos$z[1,1,,], col = colormap,
+atmos <- ModelGrid(mb300.data, c(0.5, 0.5))
+colormap <- rev(rainbow(100, start = 0 , end = 5/6))
+image(x = atmos$x, y = atmos$y, z = atmos$z[1,which(mb300.variables == "tmpprs"),,], col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Temperature at 300 mb:", atmos$fcst.date))
 plotGEOmap(coastmap, border = "black", add = TRUE, 
@@ -100,22 +97,21 @@ plotGEOmap(coastmap, border = "black", add = TRUE,
 #FIGURE 3
 #Relative humidity at ground level
 
-colormap <- rainbow(500, start = 0 , end = 5/6)
-atmos <- ModelGrid(rh2m.data, c(0.5, 0.5), "latlon")
-image(x = atmos$x, y = atmos$y, z = atmos$z[1,1,,], col = colormap,
+colormap <- rev(cm.colors(100))
+image(x = ground$x, y = ground$y, 
+    z = ground$z[1,which(ground.variables == "rh2m"),,], col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Relative Humidity at Ground Level:", 
-    atmos$fcst.date))
+    ground$fcst.date))
 plotGEOmap(coastmap, border = "black", add = TRUE,
     MAPcol = NA)
 
 #FIGURE 4
 #Winds at 300 mb (around jet stream level)
-atmos.ew <- ModelGrid(ugrd300.data, c(0.5, 0.5), "latlon")
-atmos.ns <- ModelGrid(vgrd300.data, c(0.5, 0.5), "latlon")
-winds.vel <- sqrt(atmos.ew$z[1,1,,]^2 + atmos.ns$z[1,1,,]^2)
-colormap <- rainbow(500, start = 0 , end = 5/6)
-image(x = atmos.ew$x, y = atmos.ew$y, z = winds.vel, col = colormap,
+winds.vel <- sqrt(atmos$z[1,which(mb300.variables == "ugrdprs"),,]^2 + 
+    atmos$z[1,which(mb300.variables == "vgrdprs"),,]^2)
+colormap <- topo.colors(100)
+image(x = atmos$x, y = atmos$y, z = winds.vel, col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Wind Velocity at 300 mb:", atmos$fcst.date))
 plotGEOmap(coastmap, border = "black", add = TRUE,
@@ -125,18 +121,15 @@ plotGEOmap(coastmap, border = "black", add = TRUE,
 #and plot 10 m wind speed for 6 hr forecast
 
 time <- c(2,2) #6 hr forecast
-
-u10.data <- DODSGrab(latest.model, latest.model.run,
-   "ugrd10m", time, lon, lat, display.url = FALSE)
-v10.data <-DODSGrab(latest.model, latest.model.run,
-   "vgrd10m", time, lon, lat, display.url = FALSE)
+wind.variables <- c("ugrd10m", "vgrd10m")
+wind.data <- DODSGrab(latest.model, latest.model.run,
+   wind.variables, time, lon, lat)
  
 #Make an array for quick indexing
-atmos.u10 <- ModelGrid(u10.data, c(0.5, 0.5))
-atmos.v10 <- ModelGrid(v10.data, c(0.5, 0.5))
+wind <- ModelGrid(wind.data, c(0.5, 0.5))
 
 #Wind magnitude
-winds.vel <- sqrt(atmos.u10$z[1,1,,]^2 + atmos.v10$z[1,1,,]^2)
+winds.vel <- sqrt(wind$z[1,1,,]^2 + wind$z[1,2,,]^2)
 
 #FIGURE 5
 image(x = atmos$x, y = atmos$y, z = winds.vel, col = colormap,

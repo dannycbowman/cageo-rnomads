@@ -74,7 +74,7 @@ vi <- which(atmos$variables == "TMP")
 
 
 #Set up color scale
-colormap <- rev(rainbow(500, start = 0 , end = 5/6))
+colormap <- rev(rainbow(100, start = 0 , end = 5/6))
 
 #Make forecast image
 image(x = atmos$x + 180, y = sort(atmos$y), z = atmos$z[li,vi,,], col = colormap,
@@ -91,7 +91,7 @@ plotGEOmap(coastmap, border = "black", add = TRUE,
 
 li <- which(atmos$levels == "300 mb")
 vi <- which(atmos$variables == "TMP")
-colormap <- rev(rainbow(500, start = 0 , end = 5/6))
+colormap <- rev(rainbow(100, start = 0 , end = 5/6))
 image(x = atmos$x + 180, y = atmos$y, z = atmos$z[li,vi,,], col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Temperature at 300 mb:", atmos$fcst.date))
@@ -104,7 +104,7 @@ plotGEOmap(coastmap, border = "black", add = TRUE,
 
 li <- which(atmos$levels == "2 m above ground")
 vi <- which(atmos$variables == "RH")
-colormap <- rainbow(500, start = 0 , end = 5/6)
+colormap <- rev(cm.colors(100))
 image(x = atmos$x + 180, y = atmos$y, z = atmos$z[li,vi,,], col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Relative Humidity at Ground Level:", 
@@ -122,7 +122,7 @@ ew.winds <- atmos$z[li,vi,,]
 vi <- which(atmos$variables == "VGRD")
 ns.winds <- atmos$z[li,vi,,]
 winds.vel <- sqrt(ew.winds^2 + ns.winds^2)
-colormap <- rainbow(500, start = 0 , end = 5/6)
+colormap <- topo.colors(100)
 image(x = atmos$x + 180, y = atmos$y, z = winds.vel, col = colormap,
     xlab = "Longitude", ylab = "Latitude", 
     main = paste("World Wind Velocity at 300 mb:", atmos$fcst.date))
@@ -183,8 +183,6 @@ library(rNOMADS)
 #Get the latest 2 model instances
 urls.out <- CrawlModels(abbrev = "gfs_0p50",
     depth = 2, verbose = FALSE)
-resolution <- c(0.5, 0.5)
-grid.type <- "latlon"
 
 #Get the available predictions.
 #If this throws an error, try urls.out[2]
@@ -211,20 +209,21 @@ variables <- c("HGT", "TMP", "UGRD", "VGRD")
 lon <- -79.052104
 lat <- 35.907553
 
-#Get profile
-profile <- RTModelProfile(urls.out[1], pred.now, levels, variables,
-         lon, lat, resolution, grid.type, spatial.average = TRUE)
+#Get grib file
+grib.info <- GribGrab(urls.out[1], pred.now, levels, variables,
+   model.domain = c(lon - 2, lon + 2, lat + 2, lat - 2))
+model.data <- ReadGrib(grib.info$file.name, levels, variables)
 
+#Build atmospheric profile
+profile <- BuildProfile(model.data, lon, lat, 
+    spatial.average = TRUE, points = 8)
+    
 #Get height in meters
-hgti <- which(profile$variables == "HGT")
-hgt <- profile$profile.data[[1]][,hgti]
-
+hgt <- profile[[1]]$profile.data[, which(variables == "HGT"),]
 
 #FIGURE 6 - temperature
 
-
-vi <- which(profile$variables == "TMP")
-tmp <- profile$profile.data[[1]][,vi] - 273.15
+tmp <- profile[[1]]$profile.data[, which(variables == "TMP"),]
 
 #Let's make a spline
 
@@ -236,46 +235,40 @@ synth.tmp <- tmp.spline(synth.hgt)
 plot(tmp, hgt, pch = 19, col = "red", 
    xlab = "Temperature (C)", ylab = "Height (m)",
    main = paste("Temperature versus Geopotential Height:",  
-   atmos$fcst.date))
+   profile[[1]]$forecast.date))
 lines(synth.tmp, synth.hgt, col = "blue")
 legend("topright", col = c("red", "blue"), pch = c(19, NA),
-   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"))
+   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"),
+   bg = "white")
 
-#FIGURE 7 - Wind Speed
+#FIGURE 7 - Wind Speed and azimuth
 
-wui <- which(profile$variables == "UGRD")
-wvi <- which(profile$variables == "VGRD")
-
-wu <- profile$profile.data[[1]][, wui]
-wv <- profile$profile.data[[1]][, wvi]
-wvel <- sqrt(wu^2 + wv^2) 
-
-#Convert to km/hr
-wvel <- wvel * 3.6
+wu <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "UGRD"),]
+wv <- profile[[1]]$profile.data[, which(profile[[1]]$variables == "VGRD"),]
 
 #Let's make a spline 
-
-tmp.spline <- splinefun(hgt, wvel, method = "natural")
+wu.spline <- splinefun(hgt, wu, method = "natural")
+wv.spline <- splinefun(hgt, wv, method = "natural")
 
 synth.hgt <- seq(min(hgt), max(hgt), length.out = 1000)
-synth.wvel <- tmp.spline(synth.hgt)
+synth.uvel <- wu.spline(synth.hgt)
+synth.vvel <- wv.spline(synth.hgt)
 
-plot(wvel, hgt, pch = 19, col = "red",
-   xlab = "Wind Speed (km/hr)", ylab = "Height (m)",
-   main = paste("Wind Speed versus Geopotential Height:",  
-   atmos$fcst.date))
-lines(synth.wvel, synth.hgt, col = "blue")
-legend("bottomright", col = c("red", "blue"), pch = c(19, NA),
-   lty = c(NA, 1), legend = c("Model Values", "Spline Fit"))
+PlotWindProfile(synth.uvel, synth.vvel, synth.hgt, lines = TRUE, 
+    points = FALSE, elev.circles = c(0, 25000, 50000), 
+    elev.labels = c("0", "25", "50 km asl"),
+    radial.lines = seq(45, 360, by = 45), colorbar = TRUE, invert = FALSE, 
+    point.cex = 2, pch = 19, lty = 1, lwd = 3, 
+    height.range = c(0, 50000), colorbar.label = "Wind Speed (m/s)")
 
 
 #FIGURE 8
 #ATMOSPHERIC DENSITY (ASSUMING DRY AIR)
 
-p <- as.numeric(gsub("\\D", "", profile$levels)) * 100
+p <- as.numeric(gsub("\\D", "", profile[[1]]$levels)) * 100
 R <- 287.058 #Specific gas constant, J/(kg * K)
 
-rho <- p / ((tmp + 273.15) * R) #Air density
+rho <- p / (tmp * R) #Air density
 
 rho.spline <- splinefun(hgt, rho, method = "natural")
 synth.hgt <- seq(min(hgt), max(hgt), length.out = 1000)

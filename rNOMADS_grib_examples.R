@@ -277,7 +277,7 @@ synth.rho <- rho.spline(synth.hgt)
 plot(rho, hgt, pch = 19, col = "red",
    xlab = "Density (kg/m3)", ylab = "Height (m)",
    main = paste("Dry Air Density versus Geopotential Height:",
-   atmos$fcst.date))
+   profile[[1]]$forecast.date))
 lines(synth.rho, synth.hgt, col = "blue")
 legend("topright", col = c("red", "blue"), pch = c(19, NA),
    lty = c(NA, 1), legend = c("Model Values", "Spline Fit"))
